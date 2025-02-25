@@ -25,10 +25,33 @@ def main():
     pygame.init()
     target_x, target_y = armdef.width / 2, armdef.height / 2 - 150
     model = load_model("data/controlnet_xy_and_theta.pth")
+    #円状のパスを生成（各要素は[x,y]の座標）
+    target_path = draw_circle()
+    print(f"target path length: {len(target_path)}")
+    # for pos in target_path:
+    #     target_x, target_y = pos
     generate_control_signals(target_x, target_y, model)
+    pygame.time.wait(50)
     pygame.quit()
+    
 
 
+def draw_circle():
+    #円の軌道を描くための座標を格納するリストpathを設定
+    path= []
+    #円の中心のy座標をarmdef.width/2-100に設定
+    y0 = armdef.height/2-100
+    #円の中心のx座標をarmdef.height/2に設定
+    x0 = armdef.width/2
+    #円の半径を150に設定
+    r = 150
+    # 円の軌道を描くための座標を格納するリストlに座標を追加
+    circle = np.arange(0,360,0.1)
+    for i in tqdm.tqdm(range(len(circle))):
+        x = x0 + r * np.cos(np.radians(i))
+        y = y0 + r * np.sin(np.radians(i))
+        path.append([x,y])
+    return path
 # ----------------------------------------------------------
 # Load a model from a given path and put it on GPU
 # ----------------------------------------------------------
@@ -37,6 +60,10 @@ def load_model(model_path):
     model.load_state_dict(torch.load(model_path))
     return model.cuda()
 
+#このファイルと同一のパス画像を保存する関数を定義
+def save_image(display, filename):
+    pygame.image.save(display, filename)
+    
 
 # ----------------------------------------------------------
 # Generate control signals, visualize and plot data.
@@ -50,7 +77,7 @@ def generate_control_signals(target_x, target_y, model):
     # Build the list of target theta values.
     target_thetas = [(3.14 / 2) * (i / 50) for i in tqdm.tqdm(range(-50, 50))]
     target_thetas = target_thetas + target_thetas[::-1]
-    target_thetas *= 4
+    target_thetas *= 1
     print(f"target thetas length: {len(target_thetas)}")
 
     # Compute control signals for all target thetas.
@@ -66,16 +93,18 @@ def generate_control_signals(target_x, target_y, model):
     df = pd.DataFrame(xt_all_runs_reshaped)
 
     # Apply a moving average filter.
-    df_filtered = moving_average_filter(df)
+    df_filtered = df
 
     # Plot both original and filtered data.
     # plot_data(df, df_filtered)
-
+    display.fill((255, 255, 255))
     # Iterate over the filtered dataframe to draw arm images.
     for i in range(df_filtered.shape[0]):
         xt = df_filtered.iloc[i].to_list()
         print(f"xt: {xt}")
-        draw_arm(target_x, target_y, xt, target_thetas[i], display)
+        if i % 15 == 0 and i != 0:
+            draw_arm(target_x, target_y, xt, target_thetas[i], display)
+    save_image(display, "output.png")
 
 
 # ----------------------------------------------------------
@@ -136,28 +165,27 @@ def plot_data(df, df_filtered):
 # ----------------------------------------------------------
 def draw_arm(x, y, xt, theta, display):
     armdef.arm.calc(xt)
-    display.fill((255, 255, 255))
-    pygame.draw.line(
-        display,
-        (255, 0, 0),
-        (x, y),
-        (np.cos(np.pi / 2 - theta) * 70 + x, np.sin(np.pi / 2 - theta) * 70 + y),
-        5,
-    )
+    # pygame.draw.line(
+    #     display,
+    #     (255, 0, 0),
+    #     (x, y),
+    #     (np.cos(np.pi / 2 - theta) * 70 + x, np.sin(np.pi / 2 - theta) * 70 + y),
+    #     5,
+    # )
     armdef.arm.draw(display)
-    font = pygame.font.Font(None, 24)
-    text1 = font.render(
-        f"result: {armdef.arm.last.x[1] / np.pi * 180} degree", True, (0, 0, 0)
-    )
-    text2 = font.render(f"target: {theta / np.pi * 180} degree", True, (0, 0, 0))
-    text3 = font.render(
-        f"error: {abs(armdef.arm.last.x[1] - theta) / np.pi * 180} degree",
-        True,
-        (0, 0, 0),
-    )
-    display.blit(text1, (10, 10))
-    display.blit(text2, (10, 40))
-    display.blit(text3, (10, 70))
+    # font = pygame.font.Font(None, 24)
+    # text1 = font.render(
+    #     f"result: {armdef.arm.last.x[1] / np.pi * 180} degree", True, (0, 0, 0)
+    # )
+    # text2 = font.render(f"target: {theta / np.pi * 180} degree", True, (0, 0, 0))
+    # text3 = font.render(
+    #     f"error: {abs(armdef.arm.last.x[1] - theta) / np.pi * 180} degree",
+    #     True,
+    #     (0, 0, 0),
+    # )
+    # display.blit(text1, (10, 10))
+    # display.blit(text2, (10, 40))
+    # display.blit(text3, (10, 70))
     pygame.draw.circle(display, (0, 0, 0), (int(x), int(y)), 10)
     pygame.display.update()
     pygame.time.wait(50)

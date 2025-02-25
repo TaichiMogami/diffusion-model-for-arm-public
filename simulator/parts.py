@@ -25,7 +25,7 @@ class Part():
             self.next.calc(vals)
 
     # 描画
-    def draw(self, display, color=(0, 0, 0)):
+    def draw(self, display, color=(0, 0, 255)):
         self.draw_part(display, color)
         if self is not self.base.last:
             self.next.draw(display, color)
