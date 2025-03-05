@@ -42,23 +42,6 @@ class Model(nn.Module):
             x = middle(x, feature)
         return x
 
-    def denoise(self, xt: torch.Tensor, steps: int, pos):
-        for i in reversed(range(1, steps)):
-            step = torch.FloatTensor([i]).cuda()
-            z = torch.randn_like(xt)
-            step = torch.Tensor([i]).long()
-            xt_ = xt.view(1, -1)
-            if i == 1:
-                xt = (1 / torch.sqrt(alpha[i])) * (
-                    xt - (torch.sqrt(beta[i])) * self(xt_, step, pos)
-                )
-            else:
-                xt = (1 / torch.sqrt(alpha[i])) * (
-                    xt - (beta[i] / torch.sqrt(1 - alpha_[i])) * self(xt_, step, pos)
-                ) + torch.sqrt((1 - alpha_[i - 1]) / (1 - alpha_[i]) * beta[i]) * z
-            xt = xt.view(-1)
-        return xt
-
     def denoise_once(self, xt: torch.Tensor, i: int, pos):
         step = torch.FloatTensor([i]).cuda()
         z = torch.randn_like(xt)
@@ -73,7 +56,11 @@ class Model(nn.Module):
                 xt - (beta[i] / torch.sqrt(1 - alpha_[i])) * self(xt_, step, pos)
             ) + torch.sqrt((1 - alpha_[i - 1]) / (1 - alpha_[i]) * beta[i]) * z
         xt = xt.view(-1)
-        print("after denoise_once:", xt)
+        return xt
+
+    def denoise(self, xt: torch.Tensor, steps: int, pos):
+        for i in reversed(range(1, steps)):
+            self.denoise_once(xt, i, pos)
         return xt
 
 
@@ -168,37 +155,18 @@ class ControlNet(nn.Module):
             x = x + self.fc1(feature1)
 
             x_ = self.fc2(feature2)
-            x_ = self.zeroconv1(x_.view(-1, 1, 1024)).view(-1, 1024)
-            x_ = x_ + x_first
-            x_ = self.pe_copy(x_, step)
-            x_ = self.encoder_copy(x_)
-            x_ = x_ + self.fc1_copy(feature1)
-            x__ = x_
-            x_ = self.zeroconv2(x_.view(-1, 1, 1024)).view(-1, 1024)
-            x = self.decoder(x + x_)
-            x_ = self.decoder_copy(x__)
-            x = x + self.zeroconv3(x_.view(-1, 1, 1024)).view(-1, 1024)
+            x_second = self.zeroconv1(x_.view(-1, 1, 1024)).view(-1, 1024)
+            x_second = x_second + x_first
+            x_second = self.pe_copy(x_second, step)
+            x_second = self.encoder_copy(x_second)
+            x_second = x_second + self.fc1_copy(feature1)
+            x_third = x_second
+            x_second = self.zeroconv2(x_second.view(-1, 1, 1024)).view(-1, 1024)
+            x = self.decoder(x + x_second)
+            x_ = self.decoder_copy(x_third)
+            x = x + self.zeroconv3(x_second.view(-1, 1, 1024)).view(-1, 1024)
             x = self.last_fc(x)
             return x
-
-    def denoise(self, xt: torch.Tensor, steps: int, pos, theta):
-        for i in reversed(range(1, steps)):
-            step = torch.FloatTensor([i]).cuda()
-            z = torch.randn_like(xt)
-            step = torch.Tensor([i]).long()
-            xt_ = xt.view(1, -1)
-            if i == 1:
-                xt = (1 / torch.sqrt(alpha[i])) * (
-                    xt - (torch.sqrt(beta[i])) * self(xt_, step, pos, theta)
-                )
-            else:
-                xt = (1 / torch.sqrt(alpha[i])) * (
-                    xt
-                    - (beta[i] / torch.sqrt(1 - alpha_[i]))
-                    * self(xt_, step, pos, theta)
-                ) + torch.sqrt((1 - alpha_[i - 1]) / (1 - alpha_[i]) * beta[i]) * z
-            xt = xt.view(-1)
-        return xt
 
     def denoise_once(self, xt: torch.Tensor, i: int, pos, theta):
         step = torch.FloatTensor([i]).cuda()
@@ -214,6 +182,11 @@ class ControlNet(nn.Module):
                 xt - (beta[i] / torch.sqrt(1 - alpha_[i])) * self(xt_, step, pos, theta)
             ) + torch.sqrt((1 - alpha_[i - 1]) / (1 - alpha_[i]) * beta[i]) * z
         xt = xt.view(-1)
+        return xt
+
+    def denoise(self, xt: torch.Tensor, steps: int, pos, theta):
+        for i in reversed(range(1, steps)):
+            self.denoise_once(xt, i, pos, theta)
         return xt
 
 
