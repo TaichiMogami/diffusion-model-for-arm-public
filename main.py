@@ -90,7 +90,7 @@ def generate_control_signals(target_x, target_y, model):
 
     # Reshape so that each row has 12 elements (assumed signal dimension).
     xt_all_runs_reshaped = xt_all_runs_np.reshape(-1, 12)
-
+    print(f"xt_all_runs_reshaped : {xt_all_runs_reshaped}")
     # Create a dataframe from the reshaped array.
     df = pd.DataFrame(xt_all_runs_reshaped)
 
@@ -186,19 +186,19 @@ def draw_arm(x, y, xt, theta, display,color):
         5,
     )
     armdef.arm.draw(display,color)
-    # font = pygame.font.Font(None, 24)
-    # text1 = font.render(
-    #     f"result: {armdef.arm.last.x[1] / np.pi * 180} degree", True, (0, 0, 0)
-    # )
-    # text2 = font.render(f"target: {theta / np.pi * 180} degree", True, (0, 0, 0))
-    # text3 = font.render(
-    #     f"error: {abs(armdef.arm.last.x[1] - theta) / np.pi * 180} degree",
-    #     True,
-    #     (0, 0, 0),
-    # )
-    # display.blit(text1, (10, 10))
-    # display.blit(text2, (10, 40))
-    # display.blit(text3, (10, 70))
+    font = pygame.font.Font(None, 24)
+    text1 = font.render(
+        f"result: {armdef.arm.last.x[1] / np.pi * 180} degree", True, (0, 0, 0)
+    )
+    text2 = font.render(f"target: {theta / np.pi * 180} degree", True, (0, 0, 0))
+    text3 = font.render(
+        f"error: {abs(armdef.arm.last.x[1] - theta) / np.pi * 180} degree",
+        True,
+        (0, 0, 0),
+    )
+    display.blit(text1, (10, 10))
+    display.blit(text2, (10, 40))
+    display.blit(text3, (10, 70))
     pygame.draw.circle(display, (0, 0, 0), (int(x), int(y)), 10)
     pygame.display.update()
     pygame.time.wait(50)

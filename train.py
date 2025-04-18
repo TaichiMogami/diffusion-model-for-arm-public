@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import torch
 import torch.nn as nn
-from diffusion_model import ControlNet, ModelForXY, ModelForTheta, Dataset, steps, gen_xt,  normalize
+from diffusion_model import ControlNet, ModelForXY, ModelForTheta, Dataset, denoise_steps, gen_xt,  normalize
 import os
 
 # 学習をおこない, パラメータを保存する
@@ -18,7 +18,7 @@ def train_xy(model):
         pin_memory=True
     )
 
-    epochs = 20
+    epochs = 1000
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     scheduler = torch.optim.lr_scheduler.LinearLR(
         optimizer, start_factor=1, end_factor=0.1, total_iters=epochs)
@@ -29,7 +29,7 @@ def train_xy(model):
         for batch, (x, pos, theta) in tqdm(enumerate(dataloader)):
             x, pos, theta = x.to(device), pos.to(device), theta.to(device)
             x = normalize(x)
-            t = torch.randint(1, steps, (batch_size,),
+            t = torch.randint(1, denoise_steps, (batch_size,),
                               device=device).long()
             y = torch.randn_like(x).to(device)
             x = gen_xt(x, t, y)
@@ -72,7 +72,7 @@ def train_theta(model):
         for batch, (x, pos, theta) in tqdm(enumerate(dataloader)):
             x, pos, theta = x.to(device), pos.to(device), theta.to(device)
             x = normalize(x)
-            t = torch.randint(1, steps, (batch_size,),
+            t = torch.randint(1, denoise_steps, (batch_size,),
                               device=device).long()
             y = torch.randn_like(x).to(device)
             x = gen_xt(x, t, y)
@@ -91,7 +91,7 @@ def train_theta(model):
     torch.save(model.state_dict(), "data/model_for_theta.pth")
 
 def train_controlnet(finetune=False):
-    model = ControlNet(steps).cuda()
+    model = ControlNet(denoise_steps).cuda()
     device = "cuda"
     dataset = Dataset("data/train.csv")
     batch_size = 100
@@ -119,7 +119,7 @@ def train_controlnet(finetune=False):
                 for batch, (x, pos, theta) in tqdm(enumerate(dataloader)):
                     x, pos, theta = x.to(device), pos.to(device), theta.to(device)
                     x = normalize(x)
-                    t = torch.randint(1, steps, (batch_size,),
+                    t = torch.randint(1, denoise_steps, (batch_size,),
                                     device=device).long()
                     y = torch.randn_like(x).to(device)
                     x = gen_xt(x, t, y)
@@ -152,7 +152,7 @@ def train_controlnet(finetune=False):
         for batch, (x, pos, theta) in tqdm(enumerate(dataloader)):
             x, pos, theta = x.to(device), pos.to(device), theta.to(device)
             x = normalize(x)
-            t = torch.randint(1, steps, (batch_size,),
+            t = torch.randint(1, denoise_steps, (batch_size,),
                               device=device).long()
             y = torch.randn_like(x).to(device)
             x = gen_xt(x, t, y)

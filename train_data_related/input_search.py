@@ -13,7 +13,7 @@ def gen_random_inputs(arm):
 # x, y: 目標座標
 # c: 山登り法の試行回数
 # 最もx,yに近かった時の入力、x座標、y座標、角度を返す
-def yamanobori(arm, x, y, c):
+def yamanobori(arm, x, y, c, fixed_inputs=None):
     arm.init()
     min_inputs = []
     min_d = 10000000
@@ -22,6 +22,10 @@ def yamanobori(arm, x, y, c):
     min_theta = 0
     for i in range(c):
         inputs = gen_random_inputs(arm)
+        # 特定の入力を固定
+        if fixed_inputs is not None:
+           for idx, val in fixed_inputs.items():
+               inputs[idx] = val
         arm.calc(inputs.copy())
         x_ = arm.last.x[0][0]
         y_ = arm.last.x[0][1]

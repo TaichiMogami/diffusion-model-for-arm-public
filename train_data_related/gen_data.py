@@ -5,7 +5,8 @@ import pandas as pd
 
 def gen_data(x, y):
     df = pd.DataFrame()
-    input_, x_, y_, theta = yamanobori(armdef.arm, x, y, 100)
+    fixed = {3:0, 4:40}
+    input_, x_, y_, theta = yamanobori(armdef.arm, x, y, 100, fixed_inputs=fixed)
     #input_ = gen_random_inputs(armdef.arm)
     df = pd.DataFrame([input_])
     armdef.arm.calc(input_)
